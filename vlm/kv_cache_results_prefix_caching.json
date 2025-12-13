@@ -1,0 +1,70 @@
+{
+  "config_name": "prefix_caching",
+  "timestamp": "2025-12-13 04:59:31",
+  "baseline": {
+    "avg_ttft": 0.03578091897070408,
+    "min_ttft": 0.030007155146449804,
+    "max_ttft": 0.03796693775802851,
+    "std_ttft": 0.003406438926991172,
+    "avg_decode_speed": 115.2937608599933,
+    "min_decode_speed": 114.03619381873287,
+    "max_decode_speed": 115.9806673172455,
+    "avg_total_time": 0.8323135548271239
+  },
+  "prefix_caching": {
+    "first_ttft": 0.03858123393729329,
+    "subsequent_avg_ttft": 0.03537462139502168,
+    "ttft_reduction_pct": 8.311327075446506,
+    "all_results": [
+      {
+        "ttft": 0.03858123393729329,
+        "decode_speed": 115.36233050130639
+      },
+      {
+        "ttft": 0.03102866094559431,
+        "decode_speed": 115.07161598620552
+      },
+      {
+        "ttft": 0.030902034137398005,
+        "decode_speed": 115.42346169361149
+      },
+      {
+        "ttft": 0.03624595841392875,
+        "decode_speed": 114.50208181704016
+      },
+      {
+        "ttft": 0.043321832083165646,
+        "decode_speed": 114.98060114929362
+      }
+    ]
+  },
+  "sequence_length": {
+    "short": {
+      "prompt_length": 5,
+      "avg_ttft": 0.03400170681998134,
+      "avg_decode_speed": 103.13719354414548,
+      "avg_output_tokens": 14.4,
+      "ttft_std": 0.003863022854196722
+    },
+    "medium": {
+      "prompt_length": 25,
+      "avg_ttft": 0.03219838133081794,
+      "avg_decode_speed": 114.93313168625893,
+      "avg_output_tokens": 74.6,
+      "ttft_std": 0.00038250384754254387
+    },
+    "long": {
+      "prompt_length": 97,
+      "avg_ttft": 0.03428522609174252,
+      "avg_decode_speed": 115.90638702442888,
+      "avg_output_tokens": 214.2,
+      "ttft_std": 0.0021164339102459516
+    }
+  },
+  "memory": {
+    "memory_before": 22778,
+    "memory_after": 22778,
+    "memory_total": 24564,
+    "memory_delta": 0
+  }
+}

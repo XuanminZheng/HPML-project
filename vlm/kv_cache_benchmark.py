@@ -10,27 +10,28 @@ from openai import OpenAI
 API_BASE = "http://localhost:8000/v1"
 MODEL = "openbmb/MiniCPM-V-4"
 IMAGE_PATH = "img/1.jpg"
-PROMPTS = [
-    "描述这张图片",
-    "这张图片中有什么物体？",
-    "详细分析这张图片的内容，包括颜色、构图和主题",
-]
 NUM_RUNS = 5
+WARMUP_RUNS = 3
 
 # ========== 初始化 ==========
 client = OpenAI(base_url=API_BASE, api_key="token")
 
+# 加载图片
 with open(IMAGE_PATH, "rb") as f:
     img_base64 = base64.b64encode(f.read()).decode()
 
 def get_gpu_memory():
     """获取 GPU 显存使用情况"""
-    result = subprocess.run(
-        ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
-        capture_output=True, text=True
-    )
-    used, total = map(int, result.stdout.strip().split(", "))
-    return used, total
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True
+        )
+        used, total = map(int, result.stdout.strip().split(", "))
+        return used, total
+    except Exception as e:
+        print(f"Warning: Could not get GPU memory: {e}")
+        return 0, 0
 
 def run_inference_streaming(prompt):
     """流式推理，返回详细指标"""
@@ -117,15 +118,21 @@ def test_prefix_caching():
     subsequent_ttfts = [r["ttft"] for r in results[1:]]
     avg_subsequent_ttft = statistics.mean(subsequent_ttfts)
     
+    # 防止除以零
+    if first_ttft > 0:
+        reduction_pct = (1 - avg_subsequent_ttft / first_ttft) * 100
+    else:
+        reduction_pct = 0
+    
     print(f"\n📊 Prefix Caching Analysis:")
     print(f"  First request TTFT:      {first_ttft*1000:.2f} ms")
     print(f"  Subsequent avg TTFT:     {avg_subsequent_ttft*1000:.2f} ms")
-    print(f"  TTFT reduction:          {(1 - avg_subsequent_ttft/first_ttft)*100:.1f}%")
+    print(f"  TTFT reduction:          {reduction_pct:.1f}%")
     
     return {
         "first_ttft": first_ttft,
         "subsequent_avg_ttft": avg_subsequent_ttft,
-        "ttft_reduction_pct": (1 - avg_subsequent_ttft/first_ttft) * 100,
+        "ttft_reduction_pct": reduction_pct,
         "all_results": [{"ttft": r["ttft"], "decode_speed": r["decode_speed"]} for r in results]
     }
 
@@ -212,48 +219,77 @@ def run_full_benchmark(config_name="default"):
         "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
     }
     
-    # 1. 基础性能测试
-    print("\n[1/4] Running baseline performance test...")
+    # ========== 1. 充分预热 ==========
+    print(f"\n[1/5] Warming up ({WARMUP_RUNS} runs)...")
+    for i in range(WARMUP_RUNS):
+        warmup_result = run_inference_streaming("预热测试，请描述这张图片")
+        print(f"  Warmup {i+1}/{WARMUP_RUNS}: TTFT={warmup_result['ttft']*1000:.1f}ms, "
+              f"Decode={warmup_result['decode_speed']:.1f} tok/s")
+    
+    print("\n  📝 Sample output from warmup:")
+    print("-" * 40)
+    print(warmup_result["output_text"][:200] + "..." if len(warmup_result["output_text"]) > 200 else warmup_result["output_text"])
+    print("-" * 40)
+    
+    # ========== 2. Baseline 测试 ==========
+    print(f"\n[2/5] Running {NUM_RUNS} baseline tests...")
     baseline_results = []
     for i in range(NUM_RUNS):
         result = run_inference_streaming("描述这张图片")
         baseline_results.append(result)
         print(f"  Run {i+1}/{NUM_RUNS}: TTFT={result['ttft']*1000:.1f}ms, "
-              f"Decode={result['decode_speed']:.1f} tok/s")
+              f"Decode={result['decode_speed']:.1f} tok/s, "
+              f"Tokens={result['token_count']}")
+    
+    # 计算 baseline 统计
+    ttfts = [r["ttft"] for r in baseline_results]
+    decode_speeds = [r["decode_speed"] for r in baseline_results]
+    total_times = [r["total_time"] for r in baseline_results]
     
     results["baseline"] = {
-        "avg_ttft": statistics.mean([r["ttft"] for r in baseline_results]),
-        "avg_decode_speed": statistics.mean([r["decode_speed"] for r in baseline_results]),
-        "avg_total_time": statistics.mean([r["total_time"] for r in baseline_results]),
+        "avg_ttft": statistics.mean(ttfts),
+        "min_ttft": min(ttfts),
+        "max_ttft": max(ttfts),
+        "std_ttft": statistics.stdev(ttfts) if len(ttfts) > 1 else 0,
+        "avg_decode_speed": statistics.mean(decode_speeds),
+        "min_decode_speed": min(decode_speeds),
+        "max_decode_speed": max(decode_speeds),
+        "avg_total_time": statistics.mean(total_times),
     }
     
-    # 2. Prefix Caching 测试
-    print("\n[2/4] Running prefix caching test...")
+    print(f"\n  📊 Baseline Summary:")
+    print(f"    Avg TTFT: {results['baseline']['avg_ttft']*1000:.2f} ms")
+    print(f"    Avg Decode Speed: {results['baseline']['avg_decode_speed']:.2f} tok/s")
+    
+    # ========== 3. Prefix Caching 测试 ==========
+    print("\n[3/5] Running prefix caching test...")
     results["prefix_caching"] = test_prefix_caching()
     
-    # 3. 序列长度测试
-    print("\n[3/4] Running sequence length test...")
+    # ========== 4. 序列长度测试 ==========
+    print("\n[4/5] Running sequence length test...")
     results["sequence_length"] = test_different_sequence_lengths()
     
-    # 4. 显存测试
-    print("\n[4/4] Running memory utilization test...")
+    # ========== 5. 显存测试 ==========
+    print("\n[5/5] Running memory utilization test...")
     results["memory"] = test_memory_utilization()
     
-    # 保存结果
+    # ========== 保存结果 ==========
     output_file = f"kv_cache_results_{config_name}.json"
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     print(f"\n✅ Results saved to {output_file}")
     
-    # 打印摘要
+    # ========== 打印摘要 ==========
     print("\n" + "=" * 60)
     print("SUMMARY")
     print("=" * 60)
-    print(f"  Config: {config_name}")
-    print(f"  Avg TTFT: {results['baseline']['avg_ttft']*1000:.2f} ms")
-    print(f"  Avg Decode Speed: {results['baseline']['avg_decode_speed']:.2f} tok/s")
-    print(f"  Prefix Cache TTFT Reduction: {results['prefix_caching']['ttft_reduction_pct']:.1f}%")
-    print(f"  Memory Used: {results['memory']['memory_after']} MiB")
+    print(f"  Config:              {config_name}")
+    print(f"  Avg TTFT:            {results['baseline']['avg_ttft']*1000:.2f} ms")
+    print(f"  TTFT Range:          {results['baseline']['min_ttft']*1000:.2f} - {results['baseline']['max_ttft']*1000:.2f} ms")
+    print(f"  Avg Decode Speed:    {results['baseline']['avg_decode_speed']:.2f} tok/s")
+    print(f"  Prefix Cache Gain:   {results['prefix_caching']['ttft_reduction_pct']:.1f}%")
+    print(f"  Memory Used:         {results['memory']['memory_after']} / {results['memory']['memory_total']} MiB")
+    print("=" * 60)
     
     return results
 

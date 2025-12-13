@@ -1,0 +1,27 @@
+{
+  "configs": [
+    "no_prefix",
+    "prefix_caching",
+    "default"
+  ],
+  "summary": {
+    "no_prefix": {
+      "avg_ttft_ms": 62.16041762381792,
+      "avg_decode_speed": 115.58172523234862,
+      "prefix_cache_reduction_pct": -1.6116661001716048,
+      "memory_used_mib": 22778
+    },
+    "prefix_caching": {
+      "avg_ttft_ms": 35.78091897070408,
+      "avg_decode_speed": 115.2937608599933,
+      "prefix_cache_reduction_pct": 8.311327075446506,
+      "memory_used_mib": 22778
+    },
+    "default": {
+      "avg_ttft_ms": 66.67759185656905,
+      "avg_decode_speed": 114.66489431033769,
+      "prefix_cache_reduction_pct": 26.97244902115471,
+      "memory_used_mib": 22778
+    }
+  }
+}
