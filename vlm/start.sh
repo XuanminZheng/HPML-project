@@ -4,6 +4,7 @@ vllm serve openbmb/MiniCPM-V-4 \
     --dtype auto \
     --max-model-len 4096 \
     --trust-remote-code \
+    --max-num-seqs 64 \
     --gpu_memory_utilization 0.9 \
     --port 8000 > vllm.log 2>&1 &
 
