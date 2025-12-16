@@ -1,0 +1,30 @@
+{
+  "config": {
+    "num_tasks": 50,
+    "concurrency_per_gpu": 8,
+    "model": "openbmb/MiniCPM-V-4"
+  },
+  "single_gpu": {
+    "test_name": "Single GPU (GPU 0 only)",
+    "num_gpus": 1,
+    "total_tasks": 50,
+    "total_time": 32.7199612618424,
+    "successful": 50,
+    "avg_latency": 0.6543115449510515,
+    "throughput": 1.5281191685978357
+  },
+  "dual_gpu": {
+    "test_name": "Dual GPU (GPU 0 + GPU 1)",
+    "num_gpus": 2,
+    "total_tasks": 50,
+    "total_time": 17.475003245752305,
+    "successful": 50,
+    "avg_latency": 0.6914446346648038,
+    "throughput": 2.8612297976055387
+  },
+  "comparison": {
+    "speedup": 1.872386562777648,
+    "throughput_gain": 1.872386562777648,
+    "time_saved": 15.244958016090095
+  }
+}
