@@ -1,0 +1,26 @@
+[
+  {
+    "config": "baseline",
+    "accuracy": 68.0,
+    "correct": 34,
+    "total": 50,
+    "time_total": 9.185968160629272,
+    "time_per_sample": 0.18371936321258545
+  },
+  {
+    "config": "int4",
+    "accuracy": 62.0,
+    "correct": 31,
+    "total": 50,
+    "time_total": 9.822705745697021,
+    "time_per_sample": 0.19645411491394044
+  },
+  {
+    "config": "fusion",
+    "accuracy": 62.0,
+    "correct": 31,
+    "total": 50,
+    "time_total": 8.749814510345459,
+    "time_per_sample": 0.17499629020690918
+  }
+]

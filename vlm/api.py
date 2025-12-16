@@ -1,11 +1,20 @@
+import argparse
 import time
 import base64
 import subprocess
 import statistics
+import json
 from openai import OpenAI
 
 # ========== 配置 ==========
-API_BASE = "http://localhost:8000/v1"
+parser = argparse.ArgumentParser()
+parser.add_argument("--config", type=str, default="baseline",
+                    help="config: baseline / int8 / int4")
+parser.add_argument("--port", type=int, default=8000,
+                    help="vLLM API port")
+args = parser.parse_args()
+
+API_BASE = f"http://localhost:{args.port}/v1"
 MODEL = "openbmb/MiniCPM-V-4"
 IMAGE_PATH = "img/1.jpg"
 PROMPT = "描述这张图片"
@@ -174,7 +183,7 @@ def profile_performance():
     
     # 首响时间 (TTFT)
     ttft_stats = calc_stats(ttfts)
-    print("\n⏱️  Time to First Token (TTFT):")
+    print("\n️  Time to First Token (TTFT):")
     print(f"  Average:    {ttft_stats['avg']*1000:.2f} ms")
     print(f"  Min:        {ttft_stats['min']*1000:.2f} ms")
     print(f"  Max:        {ttft_stats['max']*1000:.2f} ms")
@@ -182,7 +191,7 @@ def profile_performance():
     
     # Prefill 速度
     prefill_stats = calc_stats(prefill_speeds)
-    print("\n🚀 Prefill Speed:")
+    print("\n Prefill Speed:")
     print(f"  Average:    {prefill_stats['avg']:.2f} tokens/s")
     print(f"  Min:        {prefill_stats['min']:.2f} tokens/s")
     print(f"  Max:        {prefill_stats['max']:.2f} tokens/s")
@@ -190,7 +199,7 @@ def profile_performance():
     
     # Decode 速度
     decode_stats = calc_stats(decode_speeds)
-    print("\n⚡ Decode Speed:")
+    print("\n Decode Speed:")
     print(f"  Average:    {decode_stats['avg']:.2f} tokens/s")
     print(f"  Min:        {decode_stats['min']:.2f} tokens/s")
     print(f"  Max:        {decode_stats['max']:.2f} tokens/s")
@@ -198,14 +207,14 @@ def profile_performance():
     
     # Inter-token Latency
     itl_stats = calc_stats(inter_token_latencies)
-    print("\n🔄 Inter-Token Latency:")
+    print("\n Inter-Token Latency:")
     print(f"  Average:    {itl_stats['avg']*1000:.2f} ms/token")
     print(f"  Min:        {itl_stats['min']*1000:.2f} ms/token")
     print(f"  Max:        {itl_stats['max']*1000:.2f} ms/token")
     
     # 端到端延迟
     e2e_stats = calc_stats(total_times)
-    print("\n📊 End-to-End Latency:")
+    print("\n End-to-End Latency:")
     print(f"  Average:    {e2e_stats['avg']:.3f} s")
     print(f"  Min:        {e2e_stats['min']:.3f} s")
     print(f"  Max:        {e2e_stats['max']:.3f} s")
@@ -215,17 +224,17 @@ def profile_performance():
     avg_output_tokens = statistics.mean(token_counts)
     throughput_requests = 1 / e2e_stats['avg']
     throughput_tokens = avg_output_tokens / e2e_stats['avg']
-    print("\n📈 Throughput:")
+    print("\n Throughput:")
     print(f"  Requests/s: {throughput_requests:.2f}")
     print(f"  Tokens/s:   {throughput_tokens:.2f} (output)")
     
     # Token 统计
-    print("\n🔢 Token Statistics:")
+    print("\n Token Statistics:")
     print(f"  Input Tokens:     {input_tokens}")
     print(f"  Output Tokens:    {avg_output_tokens:.1f} (avg)")
     
     # GPU 显存
-    print("\n💾 GPU Memory:")
+    print("\n GPU Memory:")
     print(f"  Used:        {mem_used} MiB")
     print(f"  Total:       {mem_total} MiB")
     print(f"  Utilization: {mem_used/mem_total*100:.1f}%")
@@ -234,33 +243,40 @@ def profile_performance():
     
     # 返回完整结果
     results = {
-        "ttft": ttft_stats,
-        "prefill_speed": prefill_stats,
-        "decode_speed": decode_stats,
-        "inter_token_latency": itl_stats,
-        "e2e_latency": e2e_stats,
+        "config": getattr(args, "config", "default"),
+        "api_base": API_BASE,
+        "num_runs": NUM_RUNS,
+        "input_tokens": input_tokens,
+        "gpu_memory_used": mem_used,
+        "gpu_memory_total": mem_total,
+        "ttft_stats": ttft_stats,
+        "total_time_stats": e2e_stats,
+        "decode_speed_stats": decode_stats,
+        "prefill_speed_stats": prefill_stats,
+        "inter_token_latency_stats": itl_stats,
         "throughput": {
             "requests_per_sec": throughput_requests,
-            "tokens_per_sec": throughput_tokens
+            "tokens_per_sec": throughput_tokens,
         },
         "tokens": {
             "input": input_tokens,
-            "output_avg": avg_output_tokens
+            "output_avg": avg_output_tokens,
         },
         "memory": {
             "used_mib": mem_used,
             "total_mib": mem_total,
-            "utilization": mem_used/mem_total
-        }
+            "utilization": mem_used / mem_total,
+        },
     }
-    
-    # 保存到文件
-    import json
-    with open("profile_results.json", "w") as f:
-        json.dump(results, f, indent=2)
-    print("Results saved to profile_results.json")
-    
+
+    # ============ 保存到文件 ============
+    out_file = f"perf_{getattr(args, 'config', 'default')}.json"
+    with open(out_file, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    print(f"saved to {out_file}")
+
     return results
+
 
 if __name__ == "__main__":
     results = profile_performance()
