@@ -282,9 +282,9 @@ If you use this project, please refer to these papers:
 
 ## 👥 Contributors
 
-Zhongyun Liu
-Zhengbin Lu
-Xuanmin Zheng
+* Zhongyun Liu
+* Zhengbin Lu
+* Xuanmin Zheng
 
 ## 🤝 Contributing Guide
 
