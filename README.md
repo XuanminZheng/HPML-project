@@ -1,4 +1,4 @@
-# HPML Project - High Performance Model Loading
+# HPML Project 
 
 An open-source project for optimizing and evaluating the inference performance and accuracy of Large Language Models (LLM) and Vision Language Models (VLM). The project includes two main modules: LLM and VLM, supporting multiple optimization strategies including quantization (INT4), operator fusion optimization.
 
