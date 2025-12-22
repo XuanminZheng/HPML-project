@@ -41,7 +41,9 @@ def run_inference_streaming():
     messages = [{
         "role": "user",
         "content": [
-            {"type": "text", "text": PROMPT},
+            {"type": "text", "text": "Describe the image content."},
+
+
             {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_base64}"}}
         ]
     }]
