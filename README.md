@@ -169,6 +169,9 @@ Fused:    234.56ms
 Standard: 312.45ms
 Speedup:  1.33x
 ```
+```
+python batch_strategy.py
+```
 
 ## 🔧 Main Script Documentation
 
